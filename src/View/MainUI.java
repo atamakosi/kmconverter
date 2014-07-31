@@ -49,7 +49,6 @@ public class MainUI extends javax.swing.JFrame {
             this.p.clear();
             workPnl.removeAll();
         }   catch (FileNotFoundException e) {
-            e.printStackTrace();
         }
         this.p.read(this.f);
         displayFile();
@@ -268,8 +267,12 @@ public class MainUI extends javax.swing.JFrame {
     }//GEN-LAST:event_saveBtnActionPerformed
 
     private void convertBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_convertBtnActionPerformed
-        Converter c = new Converter();
-        
+        p.beginConversion();
+        this.p.clear();
+        workPnl.removeAll();
+        repaint();
+        this.p.read(f);
+        displayFile();
     }//GEN-LAST:event_convertBtnActionPerformed
 
     private void settingsBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_settingsBtnActionPerformed

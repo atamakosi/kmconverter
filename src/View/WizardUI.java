@@ -106,13 +106,14 @@ public class WizardUI extends javax.swing.JDialog {
         userTopPnl.add(uTopLbl);
         userCard.add(userTopPnl, BorderLayout.NORTH);
         JPanel centerUserPnl = new JPanel(new java.awt.BorderLayout());
-        userTbl = new JTable(new XMLTableModel(UserHeaders.EMAIL));
+        userTbl = new JTable(new XMLTableModel());
         JComboBox uCB = new JComboBox(p.getHeaders());
         userTbl.getColumn("CSV Headers").setCellEditor(new DefaultCellEditor(uCB));
         centerUserPnl.add(userTbl, BorderLayout.CENTER);
-        uTxtFld = new JTextField("Enter domain for email.");
+        uTxtFld = new JTextField();
+        uTxtFld.setToolTipText("Enter domain for email.");
 //        uTxtFld.setVisible(true);
-        uTxtFld.setEnabled(false);
+        uTxtFld.setEnabled(true);
         uTxtFld.addActionListener(new ActionListener() {
 
             @Override
@@ -131,15 +132,15 @@ public class WizardUI extends javax.swing.JDialog {
                 uChkBoxActionPerformed(e);
             }
         });
-        JCheckBox emailChkBox = new JCheckBox("Append domain to email?");
-        emailChkBox.addActionListener(new ActionListener() {
-
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                emailChkBoxActionPerformed(e);
-            }
-        });
-        bottomUserPnl.add(emailChkBox);
+//        JCheckBox emailChkBox = new JCheckBox("Append domain to email?");
+//        emailChkBox.addActionListener(new ActionListener() {
+//
+//            @Override
+//            public void actionPerformed(ActionEvent e) {
+//                emailChkBoxActionPerformed(e);
+//            }
+//        });
+//        bottomUserPnl.add(emailChkBox);
         bottomUserPnl.add(uChkBox); 
         
         //creates enrollment field card for matching course headers to moodle
@@ -172,6 +173,7 @@ public class WizardUI extends javax.swing.JDialog {
                 + " file to a preferences file that the converter will use to modify the data.  "
                 + "In the case your file changes format, you will need to rerun this Wizard.");
         lTxtFld.setEditable(false);
+        lTxtFld.setWrapStyleWord(true);
         lTxtFld.setLineWrap(true);
         JButton lBtn = new JButton("Save");
         lBtn.addActionListener(new ActionListener() {
@@ -252,26 +254,27 @@ public class WizardUI extends javax.swing.JDialog {
          if (uChkBox.isSelected())   {
              userTbl.setEnabled(false);
              prefs.setUserHeaders(userTbl.getModel());
+             prefs.setDomain(uTxtFld.getText());
          }   else   {
              userTbl.setEnabled(true);
          }
     }
     
-    private void emailChkBoxActionPerformed(ActionEvent e)  {
-        JCheckBox eChkBox = (JCheckBox) e.getSource();
-        if (eChkBox.isSelected())   {
-            uTxtFld.setEnabled(true);
-        }   else    {
-            uTxtFld.setEnabled(false);
-        }
-        
-    }
+//    private void emailChkBoxActionPerformed(ActionEvent e)  {
+//        JCheckBox eChkBox = (JCheckBox) e.getSource();
+//        if (eChkBox.isSelected())   {
+//            uTxtFld.setEnabled(true);
+//        }   else    {
+//            uTxtFld.setEnabled(false);
+//        }
+//        
+//    }
     
     private void eChkBoxActionPerformed(ActionEvent e)   {
         JCheckBox eChkBox = (JCheckBox) e.getSource();
         if (eChkBox.isSelected())   {
             enrolTbl.setEnabled(false);
-            prefs.setEnrolHeaders(enrolTbl.getModel());
+            prefs.setCourseHeaders(enrolTbl.getModel());
         }   else    {
             enrolTbl.setEnabled(true);
         }
@@ -288,60 +291,60 @@ public class WizardUI extends javax.swing.JDialog {
           private int row;
           private int editCol;
           
-       public XMLTableModel(UserHeaders u) {
-           this.row = UserHeaders.values().length;
-           this.editCol = 0;
-           this.table = new String[row][COL];
-           for (int i = 0; i < row; i++)  {
-               table[i][1] = UserHeaders.values()[i].toString();
-           }
-       }
+        public XMLTableModel() {
+            this.row = UserHeaders.values().length;
+            this.editCol = 0;
+            this.table = new String[row][COL];
+            for (int i = 0; i < row; i++)  {
+                table[i][1] = UserHeaders.values()[i].toString();
+            }
+        }
        
-       public XMLTableModel(EnrolHeaders e) {
-           this.row = p.getHeaders().length;
-           this.editCol = 1;
-           this.table = new String[row][COL];
-           for (int i = 0; i < row; i++)  {
-               table[i][0] = p.getHeaders()[i];
-           }
-       }
+        public XMLTableModel(EnrolHeaders e) {
+            this.row = p.getHeaders().length;
+            this.editCol = 1;
+            this.table = new String[row][COL];
+            for (int i = 0; i < row; i++)  {
+                table[i][0] = p.getHeaders()[i];
+            }
+        }
 
-       @Override
-       public String getColumnName(int col)   {
-           return colNames[col];
-       }
+        @Override
+        public String getColumnName(int col)   {
+            return colNames[col];
+        }
 
-       @Override
-       public int getRowCount() {
-           return row;
-       }
+        @Override
+        public int getRowCount() {
+            return row;
+        }
 
-       @Override
-       public int getColumnCount() {
-           return COL;
-       }
+        @Override
+        public int getColumnCount() {
+            return COL;
+        }
 
-       @Override
-       public Object getValueAt(int row, int col) {
-           return table[row][col];
-       }
+        @Override
+        public Object getValueAt(int row, int col) {
+            return table[row][col];
+        }
 
-       @Override
-       public void setValueAt(Object value, int row, int col)  {
-           if ( value != null)  {
-                table[row][col] = (String) value.toString();
-                this.fireTableCellUpdated(row, col);
-           }
-       }
-       
-       @Override
-       public boolean isCellEditable(int row, int col)
-       {
-           if ( col == editCol)   {
-               return true;
-           }  
-           return false;
-       }
+        @Override
+        public void setValueAt(Object value, int row, int col)  {
+            if ( value != null)  {
+                 table[row][col] = (String) value.toString();
+                 this.fireTableCellUpdated(row, col);
+            }
+        }
+
+        @Override
+        public boolean isCellEditable(int row, int col)
+        {
+            if ( col == editCol)   {
+                return true;
+            }  
+            return false;
+        }
           
         public String[][] getTable()  {
             return this.table;

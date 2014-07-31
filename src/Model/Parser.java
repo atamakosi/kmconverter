@@ -8,8 +8,11 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Class that will convert the .csv file from SMS to Moodle compatible upload.
@@ -23,18 +26,19 @@ public class Parser {
     private BufferedReader br = null;
     private String line = "";
     private String separator = ",";
-    private ArrayList<String[]> allStudents = new ArrayList();
+    private static ArrayList<String[]> allStudents = new ArrayList();
     private boolean hasHeaders = true;
     private String[] headers;
     private Preferences prefs = new Preferences();
     private String[] tableModel;
+    private String fileURL = "";
     
     /**
      * reads .csv file and returns a LinkedList of each students info
-     * @param f
-     * @return 
+     * @param f 
      */
     public void read(File f)    {
+        fileURL = f.getAbsolutePath();
         try {
             br = new BufferedReader(new FileReader(f));
             
@@ -54,14 +58,39 @@ public class Parser {
         }
     }
     
+    /**
+     * writes the reformatted file back to .csv for uploading.
+     * @param fileUrl
+     */
+    public void write(String fileUrl) {
+        FileWriter writer;
+        try {
+            writer = new FileWriter(fileUrl);
+            for (String[] strArray : allStudents )  {
+                for (int i = 0; i < strArray.length; i++)   {
+                    if ( i < strArray.length - 1)  {
+                        //adds comma after every entry
+                        writer.append(strArray[i] + ',');
+                    }   else    {
+                        //breaks last line without adding a comma
+                        writer.append(strArray[i] + '\n');
+                    }
+                    
+                }
+            }
+            writer.close();
+        } catch (IOException ex) {
+            Logger.getLogger(Parser.class.getName()).log(Level.SEVERE, null, ex);
+        } 
+    }
+    
     public ArrayList<String[]> getData() {
-        return this.allStudents;
+        return Parser.allStudents;
     }
     
     public String[] getHeaders()    {
         if ( hasHeaders )   {
-            this.headers = allStudents.get(0);
-            allStudents.remove(0);
+            this.headers = allStudents.remove(0);
             hasHeaders = false;
         }
         return headers;
@@ -89,4 +118,13 @@ public class Parser {
         return this.prefs;
     }
    
+    public void beginConversion()   {
+        Converter c = new Converter();
+        c.init();
+//        read(new File(fileURL));
+        addHeaders(c.convertHeaders(headers));
+//        allStudents = c.addEmailColumn(allStudents);
+        allStudents = c.convertEmail(allStudents);
+        write(fileURL);
+    }
 }

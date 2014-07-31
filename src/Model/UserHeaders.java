@@ -11,7 +11,7 @@ package Model;
 public enum UserHeaders {
     
     USERNAME("username"), FIRSTNAME("firstname"), LASTNAME("lastname"), 
-    EMAIL("email"), PASSWORD("password");
+    PASSWORD("password");
     
     private String name;
     

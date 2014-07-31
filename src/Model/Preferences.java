@@ -15,11 +15,11 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
+import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -28,8 +28,8 @@ import org.xml.sax.SAXException;
 /**
  * Class to hold the user preferences for exporting of data from csv to moodle.  
  * 
- * This class will only hold static data that is used by the Parser to modify
- * the data input from the external file.  No modificatinos should take place 
+ * This class will only hold data that is used by the Parser to modify
+ * the data input from the external file.  No modifications should take place 
  * in this class.  
  * 
  * 
@@ -38,16 +38,15 @@ import org.xml.sax.SAXException;
 public class Preferences {
     
     private String domain = "";
-    private boolean removeEmptyColumns = false;
+    private final boolean removeEmptyColumns = false;
     private boolean hasDomain = false;
-    private HashMap<String, String> userHeaders, enrolHeaders;
+    private final HashMap<String, String> headers;
     private String[] enrolStrings;
-    private boolean convertHeaders = false;
-    private boolean addEmail = false;
+    private final boolean convertHeaders = false;
+    private final boolean addEmail = false;
     
     public Preferences()    {
-        this.userHeaders = new HashMap();
-        this.enrolHeaders = new HashMap();
+        this.headers = new HashMap<>();
     }
     
     public String getDomain()   {
@@ -56,6 +55,7 @@ public class Preferences {
     
     public void setDomain(String domain)    {
         this.domain = domain;
+        hasDomain = true;
     }
     
     public boolean removeEmptyColumns()   {
@@ -66,10 +66,6 @@ public class Preferences {
         return this.hasDomain;
     }
     
-    public HashMap<String, String> getUserHeaders()   {
-        return this.userHeaders;
-    }
-    
     public void setUserHeaders(TableModel t) {
         String[][] tempTable = new String[t.getRowCount()][t.getColumnCount()];
         for ( int x = 0; x < t.getRowCount(); x++)  {
@@ -78,16 +74,11 @@ public class Preferences {
             }
         }
         for ( int x = 0; x < t.getRowCount(); x++ )  {
-            userHeaders.put(tempTable[x][0], tempTable[x][1]);
-        }
-        if ( addEmail ) {
-            String temp = userHeaders.remove(UserHeaders.EMAIL.toString());
-            temp += domain;
-            userHeaders.put(UserHeaders.EMAIL.toString(), temp);
+            headers.put(tempTable[x][1], tempTable[x][0]);
         }
     }
     
-    public void setEnrolHeaders(TableModel t)   {
+    public void setCourseHeaders(TableModel t)   {
         String[][] tempTable = new String[t.getRowCount()][t.getColumnCount()];
         int courseCount = 1, groupCount = 1, cohortCount = 1;
         for ( int x = 0; x < t.getRowCount(); x++)  {
@@ -95,22 +86,25 @@ public class Preferences {
                 tempTable[x][y] = (String) t.getValueAt(x, y);
             }
         }
-        //itterate the headers so that they are moodle compatible
+        //iterate the headers so that they are moodle compatible.  e.g. Option-subject1 becomes
+        //course1, Option-subject2 becomes course2 by appending the count to the end of the category
         for ( int x = 0; x < t.getRowCount(); x++ )  {
             if ( tempTable[x][1].equalsIgnoreCase(EnrolHeaders.COURSE.toString()))    {
-                enrolHeaders.put(tempTable[x][0], tempTable[x][1] + courseCount);
+                System.out.println(tempTable[x][0] + " " + tempTable[x][1]);
+                headers.put(EnrolHeaders.COURSE.toString() + courseCount, tempTable[x][0]);
                 courseCount++;
             }   else if ( tempTable[x][1].equalsIgnoreCase(EnrolHeaders.GROUP.toString()))    {
-                enrolHeaders.put(tempTable[x][0], tempTable[x][1] + groupCount);
+                headers.put(EnrolHeaders.GROUP.toString() + groupCount, tempTable[x][0]);
                 groupCount++;
             }   else if ( tempTable[x][1].equalsIgnoreCase(EnrolHeaders.COHORT.toString()))   {
-                enrolHeaders.put(tempTable[x][0], tempTable[x][1] + cohortCount);
+                headers.put(EnrolHeaders.COHORT.toString() + cohortCount, tempTable[x][0]);
                 cohortCount++;
             }
         }
     }
     
-    public void writePreferences() throws URISyntaxException  {
+    
+    public void writePreferences() throws URISyntaxException    {
         try {
             DocumentBuilderFactory dFactory = DocumentBuilderFactory.newInstance();
             DocumentBuilder dBuilder = dFactory.newDocumentBuilder();
@@ -118,58 +112,38 @@ public class Preferences {
             //root element
             Element root = doc.createElement("Preferences");
             doc.appendChild(root);
-            //header elements
-            Element username = doc.createElement("username");
-            username.appendChild(doc.createTextNode(userHeaders.get(UserHeaders.USERNAME.toString())));
-            root.appendChild(username);
             
-            Element password = doc.createElement("password");
-            password.appendChild(doc.createTextNode(userHeaders.get(UserHeaders.PASSWORD.toString())));
-            root.appendChild(password);
+            for (String str : headers.keySet())  {
+                Element node = doc.createElement(str);
+                node.appendChild(doc.createTextNode(headers.get(str)));
+                if (hasDomain && str.equalsIgnoreCase(UserHeaders.USERNAME.toString())) {
+                    Attr domainAttr = doc.createAttribute("domain");
+                    domainAttr.setValue(domain);
+                    node.setAttributeNode(domainAttr);
+                }
+                root.appendChild(node);
+            }
             
-            Element firstname = doc.createElement("firstname");
-            firstname.appendChild(doc.createTextNode(userHeaders.get(UserHeaders.FIRSTNAME.toString())));
-            root.appendChild(firstname);
-            
-            Element lastname = doc.createElement("lastname");
-            lastname.appendChild(doc.createTextNode(userHeaders.get(UserHeaders.LASTNAME.toString())));
-            root.appendChild(lastname);
-            
-            Element email = doc.createElement("email");
-            email.appendChild(doc.createTextNode(userHeaders.get(UserHeaders.EMAIL.toString())));
-            root.appendChild(email);
-            
+                       
             TransformerFactory transformerFactory = TransformerFactory.newInstance();
     
-            Transformer transformer;
             try {
-                transformer = transformerFactory.newTransformer();
+                Transformer transformer = transformerFactory.newTransformer();
                 DOMSource source = new DOMSource(doc);
-                StreamResult result = new StreamResult(new File(getClass().getResource("/xml/prefs.xml").toURI()));
+                File prefsFile = new File("Preferences.xml");
+                try {
+                    prefsFile.createNewFile();
+                } catch (IOException ex) {
+                    Logger.getLogger(Preferences.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                
+                StreamResult result = new StreamResult(prefsFile);
                 transformer.transform(source, result);
             } catch (TransformerException ex) {
                 Logger.getLogger(Preferences.class.getName()).log(Level.SEVERE, null, ex);
             }
             
         } catch (ParserConfigurationException ex) {
-            Logger.getLogger(Parser.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
-    
-        public void openPreferences()   {
-        
-        DocumentBuilderFactory dFactory = DocumentBuilderFactory.newInstance();
-        try {
-            DocumentBuilder dBuilder = dFactory.newDocumentBuilder();
-            Document doc = dBuilder.parse(getClass().getResourceAsStream("/xml/prefs.xml"));
-            NodeList nodeList = doc.getDocumentElement().getChildNodes();
-            
-            //read the nodes from the document and build the preferences tree
-            for (int i = 0; i < nodeList.getLength(); i++ ) {
-                
-            }
-            
-        } catch (SAXException | IOException | ParserConfigurationException ex) {
             Logger.getLogger(Parser.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
