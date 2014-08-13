@@ -11,6 +11,8 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -44,6 +46,13 @@ public class Parser {
             
             while ((line = br.readLine()) != null) {
                 String[] studentData = line.split(separator);
+                for (int i = 0; i < studentData.length; i++) {
+                    studentData[i] = studentData[i].trim();
+                    studentData[i] = studentData[i].replace("\"", "");
+                }
+                List<String> list = new ArrayList<>(Arrays.asList(studentData));
+                list.removeAll(Arrays.asList("FORM", "ASSM", "STUDY"));
+                studentData = list.toArray(new String[0]);
                 allStudents.add(studentData);
             }
         }   catch (FileNotFoundException e) {
@@ -91,6 +100,14 @@ public class Parser {
     public String[] getHeaders()    {
         if ( hasHeaders )   {
             this.headers = allStudents.remove(0);
+            if (headers.length < allStudents.get(0).length)    {
+                String[] tempHeaders = new String[allStudents.get(0).length];
+                for (int i = 0; i < allStudents.get(0).length; i++) {
+                    tempHeaders[i] = "Place Holder " + i;
+                }
+                System.arraycopy(headers, 0, tempHeaders, 0, headers.length);
+                this.headers = tempHeaders;
+            }
             hasHeaders = false;
         }
         return headers;
